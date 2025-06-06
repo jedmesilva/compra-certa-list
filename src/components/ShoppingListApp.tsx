@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X, Wand2 } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X, Wand2, Plus } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -22,17 +21,18 @@ export default function ShoppingListApp() {
   const [recognition, setRecognition] = useState(null);
   const [activeTab, setActiveTab] = useState('search');
   const [cameraPressed, setCameraPressed] = useState(false);
-  const [textInput, setTextInput] = useState('');
-  const [showTextAutocomplete, setShowTextAutocomplete] = useState(false);
-  const [textCursorPosition, setTextCursorPosition] = useState(0);
-  const [currentWord, setCurrentWord] = useState('');
-  const [wordStartPosition, setWordStartPosition] = useState(0);
-  const [highlightedProducts, setHighlightedProducts] = useState([]);
-  const [showAutoIdentifyButton, setShowAutoIdentifyButton] = useState(false);
+  
+  // Estados para contentEditable
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(0);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [suggestionPosition, setSuggestionPosition] = useState({ x: 0, y: 0 });
+  
   const fileInputRef = useRef(null);
-  const textareaRef = useRef(null);
+  const editorRef = useRef(null);
+  const currentWordRef = useRef({ word: '', range: null });
 
-  // Lista de estabelecimentos de exemplo
   const availableStores = [
     { id: 1, name: 'Dia Supermercado', address: 'Rua São Pedro 25, Santa Lúcia', category: 'Supermercado', image: 'https://via.placeholder.com/40x40/ff6b35/ffffff?text=DIA' },
     { id: 2, name: 'Farmácia Araújo', address: 'Av. Bias Fortes 180, Centro', category: 'Farmácia', image: 'https://via.placeholder.com/40x40/4285f4/ffffff?text=FA' },
@@ -42,7 +42,6 @@ export default function ShoppingListApp() {
     { id: 6, name: 'Pão de Açúcar', address: 'Rua Paraíba 1122, Funcionários', category: 'Supermercado', image: 'https://via.placeholder.com/40x40/ff9800/ffffff?text=PDA' },
   ];
 
-  // Lista de produtos de exemplo para busca
   const availableProducts = [
     { id: 1, name: 'Arroz Branco 5kg', brand: 'Tio João', price: 12.99, image: 'https://via.placeholder.com/60x60/e5e7eb/6b7280?text=ARZ' },
     { id: 2, name: 'Feijão Preto 1kg', brand: 'Camil', price: 8.50, image: 'https://via.placeholder.com/60x60/e5e7eb/6b7280?text=FEJ' },
@@ -75,48 +74,259 @@ export default function ShoppingListApp() {
       ).slice(0, 6)
     : [];
 
-  // Filtrar produtos baseado na palavra atual no texto multiline
-  const filteredTextProducts = currentWord && currentWord.length > 2
-    ? availableProducts.filter(product => 
-        product.name.toLowerCase().includes(currentWord.toLowerCase()) ||
-        product.brand.toLowerCase().includes(currentWord.toLowerCase())
-      ).slice(0, 6)
-    : [];
+  // Funções para contentEditable
+  const getCaretPosition = () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const editorRect = editorRef.current.getBoundingClientRect();
+    
+    return {
+      x: rect.left - editorRect.left,
+      y: rect.bottom - editorRect.top + 5
+    };
+  };
 
-  // Atualizar índice selecionado quando a lista muda
+  const getCurrentWord = () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return { word: '', range: null };
+    
+    const range = selection.getRangeAt(0).cloneRange();
+    const textNode = range.startContainer;
+    
+    if (textNode.nodeType !== Node.TEXT_NODE) {
+      return { word: '', range: null };
+    }
+    
+    const text = textNode.textContent;
+    const offset = range.startOffset;
+    
+    // Encontrar início da palavra
+    let start = offset;
+    while (start > 0 && /\S/.test(text[start - 1])) {
+      start--;
+    }
+    
+    // Encontrar fim da palavra
+    let end = offset;
+    while (end < text.length && /\S/.test(text[end])) {
+      end++;
+    }
+    
+    const word = text.slice(start, end);
+    
+    // Criar range para a palavra completa
+    const wordRange = document.createRange();
+    wordRange.setStart(textNode, start);
+    wordRange.setEnd(textNode, end);
+    
+    return { word: word.toLowerCase(), range: wordRange };
+  };
+
+  const handleEditorInput = () => {
+    const { word, range } = getCurrentWord();
+    currentWordRef.current = { word, range };
+    
+    if (word.length >= 2) {
+      const filtered = availableProducts.filter(product => 
+        (product.name.toLowerCase().includes(word) || product.brand.toLowerCase().includes(word)) &&
+        !selectedProducts.some(p => p.id === product.id)
+      );
+      
+      if (filtered.length > 0) {
+        setSuggestions(filtered.slice(0, 5));
+        setShowSuggestions(true);
+        setSelectedSuggestion(0);
+        
+        const position = getCaretPosition();
+        if (position) {
+          setSuggestionPosition(position);
+        }
+      } else {
+        setShowSuggestions(false);
+      }
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleEditorKeyDown = (e) => {
+    if (showSuggestions) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedSuggestion(prev => 
+            prev < suggestions.length - 1 ? prev + 1 : 0
+          );
+          break;
+          
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedSuggestion(prev => 
+            prev > 0 ? prev - 1 : suggestions.length - 1
+          );
+          break;
+          
+        case 'Enter':
+          e.preventDefault();
+          addProductFromEditor(suggestions[selectedSuggestion]);
+          break;
+          
+        case ' ':
+          setShowSuggestions(false);
+          break;
+          
+        case 'Escape':
+          setShowSuggestions(false);
+          break;
+      }
+    }
+  };
+
+  const createProductSpan = (product) => {
+    const span = document.createElement('span');
+    span.className = 'product-highlight bg-blue-100 text-blue-800 px-1 rounded font-medium mx-0.5';
+    span.setAttribute('data-product-id', product.id);
+    span.textContent = product.name;
+    span.contentEditable = false;
+    
+    // Adicionar botão de remoção
+    const removeBtn = document.createElement('button');
+    removeBtn.innerHTML = '×';
+    removeBtn.className = 'ml-1 text-blue-600 hover:text-red-600 text-xs';
+    removeBtn.onclick = (e) => {
+      e.preventDefault();
+      removeProductFromEditor(span, product);
+    };
+    span.appendChild(removeBtn);
+    
+    return span;
+  };
+
+  const addProductFromEditor = (product) => {
+    const { range } = currentWordRef.current;
+    if (!range) return;
+    
+    // Remover conteúdo da palavra atual
+    range.deleteContents();
+    
+    // Inserir span do produto
+    const productSpan = createProductSpan(product);
+    range.insertNode(productSpan);
+    
+    // Adicionar espaço após o produto
+    const space = document.createTextNode(' ');
+    range.setStartAfter(productSpan);
+    range.insertNode(space);
+    
+    // Posicionar cursor após o espaço
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    range.setStartAfter(space);
+    range.collapse(true);
+    selection.addRange(range);
+    
+    // Adicionar produto às listas
+    addItem(product);
+    setSelectedProducts(prev => [...prev, product]);
+    setShowSuggestions(false);
+    editorRef.current.focus();
+  };
+
+  const removeProductFromEditor = (span, product) => {
+    span.remove();
+    setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+    removeItem(product.id);
+  };
+
+  const autoIdentifyProducts = () => {
+    if (!editorRef.current) return;
+    
+    const text = editorRef.current.textContent.toLowerCase();
+    const words = text.split(/\s+/);
+    const foundProducts = [];
+    
+    // Procurar por produtos no texto
+    availableProducts.forEach(product => {
+      const productName = product.name.toLowerCase();
+      const productWords = productName.split(/\s+/);
+      
+      // Verificar se todas as palavras do produto estão no texto
+      const hasAllWords = productWords.every(word => 
+        words.some(textWord => textWord.includes(word.slice(0, 3)))
+      );
+      
+      if (hasAllWords && !selectedProducts.some(p => p.id === product.id)) {
+        foundProducts.push(product);
+      }
+    });
+    
+    // Limpar editor e recriar com produtos destacados
+    const originalText = editorRef.current.textContent;
+    let processedText = originalText;
+    
+    foundProducts.forEach(product => {
+      const productName = product.name.toLowerCase();
+      const regex = new RegExp(`\\b${productName.split(' ')[0]}\\b`, 'gi');
+      processedText = processedText.replace(regex, `<PRODUCT:${product.id}>`);
+    });
+    
+    // Reconstruir o editor com produtos destacados
+    editorRef.current.innerHTML = '';
+    const parts = processedText.split(/(<PRODUCT:\d+>)/);
+    
+    parts.forEach(part => {
+      if (part.startsWith('<PRODUCT:')) {
+        const productId = parseInt(part.match(/\d+/)[0]);
+        const product = foundProducts.find(p => p.id === productId);
+        if (product) {
+          const productSpan = createProductSpan(product);
+          editorRef.current.appendChild(productSpan);
+          addItem(product);
+        }
+      } else if (part.trim()) {
+        const textNode = document.createTextNode(part);
+        editorRef.current.appendChild(textNode);
+      }
+    });
+    
+    setSelectedProducts(prev => [...prev, ...foundProducts]);
+  };
+
+  const clearAllProducts = () => {
+    if (!editorRef.current) return;
+    
+    const productSpans = editorRef.current.querySelectorAll('.product-highlight');
+    productSpans.forEach(span => {
+      const productId = span.getAttribute('data-product-id');
+      const product = selectedProducts.find(p => p.id === parseInt(productId));
+      if (product) {
+        const textNode = document.createTextNode(product.name);
+        span.parentNode.replaceChild(textNode, span);
+        removeItem(product.id);
+      }
+    });
+    setSelectedProducts([]);
+  };
+
   useEffect(() => {
     if (filteredProducts.length > 0) {
-      setSelectedProductIndex(0); // Primeiro item selecionado
+      setSelectedProductIndex(0);
     } else {
       setSelectedProductIndex(-1);
     }
   }, [filteredProducts.length]);
 
-  // Atualizar índice selecionado para estabelecimentos
   useEffect(() => {
     if (filteredStores.length > 0) {
-      setSelectedStoreIndex(0); // Primeiro item selecionado
+      setSelectedStoreIndex(0);
     } else {
       setSelectedStoreIndex(-1);
     }
   }, [filteredStores.length]);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.max(40, textareaRef.current.scrollHeight) + 'px';
-    }
-  }, [textInput]);
-
-  // Verificar se deve mostrar o botão de auto-identificação
-  useEffect(() => {
-    const hasText = textInput.trim().length > 10;
-    const hasUnidentifiedProducts = textInput.trim().length > 0 && highlightedProducts.length === 0;
-    setShowAutoIdentifyButton(hasText && hasUnidentifiedProducts);
-  }, [textInput, highlightedProducts]);
-
-  // Inicializar reconhecimento de voz
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -182,195 +392,20 @@ export default function ShoppingListApp() {
     }
   }, [filteredProducts, selectedProductIndex]);
 
-  const handleTextInputChange = (e) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart;
+  // Prevenir paste de HTML
+  useEffect(() => {
+    const handlePaste = (e) => {
+      e.preventDefault();
+      const text = e.clipboardData.getData('text/plain');
+      document.execCommand('insertText', false, text);
+    };
     
-    setTextInput(value);
-    setTextCursorPosition(cursorPos);
-    
-    // Encontrar a palavra atual no cursor
-    const words = value.split(/\s+/);
-    let currentPos = 0;
-    let foundWord = '';
-    let wordStart = 0;
-    
-    for (let i = 0; i < words.length; i++) {
-      const wordEnd = currentPos + words[i].length;
-      
-      if (cursorPos >= currentPos && cursorPos <= wordEnd) {
-        foundWord = words[i];
-        wordStart = currentPos;
-        break;
-      }
-      
-      currentPos = wordEnd + 1; // +1 for space
+    const editor = editorRef.current;
+    if (editor) {
+      editor.addEventListener('paste', handlePaste);
+      return () => editor.removeEventListener('paste', handlePaste);
     }
-    
-    setCurrentWord(foundWord);
-    setWordStartPosition(wordStart);
-    
-    // Mostrar autocomplete se a palavra tem mais de 2 caracteres
-    if (foundWord.length > 2) {
-      setShowTextAutocomplete(true);
-      setSelectedProductIndex(0);
-    } else {
-      setShowTextAutocomplete(false);
-    }
-  };
-
-  const handleTextKeyDown = (e) => {
-    if (showTextAutocomplete && filteredTextProducts.length > 0) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        confirmTextProductSelection();
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        rejectTextProductSelection();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedProductIndex(prev => 
-          prev > 0 ? prev - 1 : filteredTextProducts.length - 1
-        );
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedProductIndex(prev => 
-          prev < filteredTextProducts.length - 1 ? prev + 1 : 0
-        );
-      } else if (e.key === 'Escape') {
-        setShowTextAutocomplete(false);
-      }
-    }
-  };
-
-  const confirmTextProductSelection = () => {
-    if (filteredTextProducts.length > 0 && selectedProductIndex >= 0) {
-      const selectedProduct = filteredTextProducts[selectedProductIndex];
-      addItem(selectedProduct);
-      
-      // Substituir a palavra atual pelo nome do produto e destacar
-      const newText = textInput.substring(0, wordStartPosition) + 
-                     selectedProduct.name + 
-                     textInput.substring(wordStartPosition + currentWord.length);
-      
-      // Adicionar destaque para o produto
-      const newHighlight = {
-        start: wordStartPosition,
-        end: wordStartPosition + selectedProduct.name.length,
-        product: selectedProduct
-      };
-      
-      setHighlightedProducts([...highlightedProducts, newHighlight]);
-      setTextInput(newText);
-      setShowTextAutocomplete(false);
-      
-      // Mover cursor para o final da palavra substituída
-      setTimeout(() => {
-        if (textareaRef.current) {
-          const newCursorPos = wordStartPosition + selectedProduct.name.length;
-          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        }
-      }, 0);
-    }
-  };
-
-  const rejectTextProductSelection = () => {
-    setShowTextAutocomplete(false);
-    // Continuar digitando normalmente
-    if (textareaRef.current) {
-      const newText = textInput + ' ';
-      setTextInput(newText);
-      setTimeout(() => {
-        textareaRef.current.setSelectionRange(newText.length, newText.length);
-      }, 0);
-    }
-  };
-
-  const autoIdentifyProducts = () => {
-    const words = textInput.toLowerCase().split(/\s+/);
-    const newHighlights = [];
-    const foundProducts = [];
-    let processedText = textInput;
-    let offset = 0;
-    
-    // Procurar por produtos no texto
-    availableProducts.forEach(product => {
-      const productNameLower = product.name.toLowerCase();
-      const productWords = productNameLower.split(/\s+/);
-      
-      // Procurar por correspondências parciais
-      for (let i = 0; i < words.length - productWords.length + 1; i++) {
-        const textSlice = words.slice(i, i + productWords.length).join(' ');
-        
-        if (productWords.some(word => textSlice.includes(word))) {
-          // Encontrar posição no texto original
-          const beforeText = words.slice(0, i).join(' ');
-          const start = beforeText.length + (beforeText.length > 0 ? 1 : 0);
-          const matchText = words.slice(i, i + productWords.length).join(' ');
-          const end = start + matchText.length;
-          
-          newHighlights.push({
-            start,
-            end,
-            product
-          });
-          
-          foundProducts.push(product);
-          break;
-        }
-      }
-    });
-    
-    // Adicionar produtos encontrados à lista
-    foundProducts.forEach(product => addItem(product));
-    setHighlightedProducts(newHighlights);
-  };
-
-  const renderHighlightedText = () => {
-    if (highlightedProducts.length === 0) {
-      return textInput;
-    }
-    
-    let result = [];
-    let lastIndex = 0;
-    
-    // Ordenar highlights por posição
-    const sortedHighlights = [...highlightedProducts].sort((a, b) => a.start - b.start);
-    
-    sortedHighlights.forEach((highlight, index) => {
-      // Texto antes do highlight
-      if (highlight.start > lastIndex) {
-        result.push(
-          <span key={`text-${index}`}>
-            {textInput.substring(lastIndex, highlight.start)}
-          </span>
-        );
-      }
-      
-      // Texto destacado
-      result.push(
-        <span 
-          key={`highlight-${index}`}
-          className="bg-blue-100 text-blue-800 px-1 rounded font-medium"
-        >
-          {textInput.substring(highlight.start, highlight.end)}
-        </span>
-      );
-      
-      lastIndex = highlight.end;
-    });
-    
-    // Texto restante
-    if (lastIndex < textInput.length) {
-      result.push(
-        <span key="text-end">
-          {textInput.substring(lastIndex)}
-        </span>
-      );
-    }
-    
-    return result;
-  };
+  }, []);
 
   const startListening = () => {
     if (recognition && !isListening) {
@@ -406,10 +441,8 @@ export default function ShoppingListApp() {
     setCameraPressed(true);
     setActiveTab('camera');
     
-    // Simular feedback visual por 200ms
     setTimeout(() => setCameraPressed(false), 200);
     
-    // Abrir o seletor de arquivos
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -418,13 +451,9 @@ export default function ShoppingListApp() {
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
-      // Verificar se é uma imagem
       if (file.type.startsWith('image/')) {
         console.log('Imagem selecionada:', file.name);
-        // Aqui você pode processar a imagem
-        // Por exemplo, mostrar um preview ou enviar para análise
         
-        // Simular processamento da imagem
         setTimeout(() => {
           alert(`Imagem "${file.name}" foi selecionada! Aqui você pode implementar o processamento da imagem.`);
           setActiveTab('search');
@@ -434,7 +463,6 @@ export default function ShoppingListApp() {
       }
     }
     
-    // Limpar o input para permitir selecionar o mesmo arquivo novamente
     event.target.value = '';
   };
 
@@ -456,15 +484,20 @@ export default function ShoppingListApp() {
   };
 
   const addItem = (product) => {
-    const newItem = {
-      id: Date.now(),
-      name: product.name,
-      brand: product.brand,
-      price: product.price,
-      quantity: 1,
-      image: product.image
-    };
-    setItems([...items, newItem]);
+    const existingItem = items.find(item => item.id === product.id);
+    if (existingItem) {
+      updateQuantity(existingItem.id, existingItem.quantity + 1);
+    } else {
+      const newItem = {
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        quantity: 1,
+        image: product.image
+      };
+      setItems([...items, newItem]);
+    }
   };
 
   const addItemFromSearch = () => {
@@ -506,6 +539,15 @@ export default function ShoppingListApp() {
           @keyframes pulse-red {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
+          }
+          [contenteditable]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+            pointer-events: none;
+          }
+          .product-highlight {
+            display: inline-block;
+            white-space: nowrap;
           }
         `
       }} />
@@ -748,36 +790,41 @@ export default function ShoppingListApp() {
           </div>
         )}
 
-        {/* Lista de autocompletar para texto multiline */}
-        {showTextAutocomplete && filteredTextProducts.length > 0 && activeTab === 'text' && (
-          <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
+        {/* Sugestões flutuantes para contentEditable */}
+        {showSuggestions && suggestions.length > 0 && activeTab === 'text' && (
+          <div
+            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-30 min-w-48 mb-4"
+            style={{
+              left: `${suggestionPosition.x + 16}px`,
+              bottom: `${120 - suggestionPosition.y}px`
+            }}
+          >
             <div className="p-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
               <p className="text-xs text-gray-600">
                 Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar ou <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Espaço</kbd> para rejeitar
               </p>
             </div>
-            {filteredTextProducts.map((product, index) => (
-              <div 
+            {suggestions.map((product, index) => (
+              <div
                 key={product.id}
-                onClick={confirmTextProductSelection}
-                className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 last:rounded-b-lg last:border-b-0 ${
-                  index === selectedProductIndex ? 'bg-blue-50 border-blue-200' : ''
+                className={`px-4 py-2 cursor-pointer flex items-center gap-2 last:rounded-b-lg ${
+                  index === selectedSuggestion 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'hover:bg-gray-50'
                 }`}
+                onClick={() => addProductFromEditor(product)}
               >
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-800 text-sm">{product.name}</h4>
-                    <p className="text-xs text-gray-500">{product.brand}</p>
-                  </div>
-                  <p className="text-sm font-semibold text-blue-600">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
-                  </p>
+                <Plus size={14} className="text-gray-400" />
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{product.name}</div>
+                  <div className="text-xs text-gray-500">{product.brand}</div>
                 </div>
+                <div className="text-sm font-semibold text-blue-600">
+                  R$ {product.price.toFixed(2).replace('.', ',')}
+                </div>
+                {index === selectedSuggestion && (
+                  <span className="ml-auto text-xs text-gray-500">Enter</span>
+                )}
               </div>
             ))}
           </div>
@@ -800,48 +847,64 @@ export default function ShoppingListApp() {
         
         {/* Input Section */}
         {activeTab === 'text' ? (
-          <div className="bg-white rounded-lg p-3 relative">
-            <div className="relative">
-              {/* Overlay para mostrar texto destacado */}
-              {highlightedProducts.length > 0 && (
-                <div 
-                  className="absolute inset-0 p-0 pointer-events-none whitespace-pre-wrap break-words text-transparent leading-normal"
-                  style={{ 
-                    font: 'inherit',
-                    fontSize: 'inherit',
-                    lineHeight: 'inherit',
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  {renderHighlightedText()}
-                </div>
-              )}
-              
-              <textarea
-                ref={textareaRef}
-                placeholder="Digite sua lista de produtos ou texto aqui..."
-                className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 focus:ring-0 focus:border-0 min-h-[40px] max-h-[200px] p-0 relative z-10"
-                value={textInput}
-                onChange={handleTextInputChange}
-                onKeyDown={handleTextKeyDown}
-                style={{ 
-                  height: 'auto', 
-                  boxShadow: 'none',
-                  backgroundColor: highlightedProducts.length > 0 ? 'transparent' : 'white'
-                }}
+          <div className="relative">
+            {/* Editor contentEditable */}
+            <div className="bg-white rounded-lg p-3 border border-gray-200 relative">
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={handleEditorInput}
+                onKeyDown={handleEditorKeyDown}
+                className="w-full min-h-[40px] max-h-[200px] overflow-y-auto outline-none text-gray-700 leading-relaxed"
+                style={{ whiteSpace: 'pre-wrap' }}
+                data-placeholder="Digite sua lista de produtos ou receita aqui... Ex: 2 xícaras de arroz, 1kg de feijão preto..."
               />
+              
+              {/* Botões de ação */}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  {selectedProducts.length > 0 && (
+                    <button
+                      onClick={clearAllProducts}
+                      className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                    >
+                      <X size={12} />
+                      Limpar produtos
+                    </button>
+                  )}
+                </div>
+                
+                <button
+                  onClick={autoIdentifyProducts}
+                  className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1 text-sm"
+                  title="Identificar produtos automaticamente"
+                >
+                  <Wand2 size={14} />
+                  Auto-identificar
+                </button>
+              </div>
             </div>
-            
-            {/* Botão de auto-identificação */}
-            {showAutoIdentifyButton && (
-              <button
-                onClick={autoIdentifyProducts}
-                className="absolute top-2 right-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
-                title="Identificar produtos automaticamente"
-              >
-                <Wand2 size={16} />
-                <span className="text-xs hidden sm:inline">Auto</span>
-              </button>
+
+            {/* Lista de produtos identificados */}
+            {selectedProducts.length > 0 && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-blue-800 text-sm">
+                    Produtos identificados ({selectedProducts.length})
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {selectedProducts.map((product, index) => (
+                    <span
+                      key={index}
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                    >
+                      {product.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         ) : (
@@ -893,7 +956,7 @@ export default function ShoppingListApp() {
             onClick={() => {
               if (isListening) stopListening();
               setActiveTab('search');
-              setShowTextAutocomplete(false);
+              setShowSuggestions(false);
             }}
             className={`p-2 rounded-full transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
           >
