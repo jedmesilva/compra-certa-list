@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X } from 'lucide-react';
+import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X, Wand2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 declare global {
@@ -23,6 +23,12 @@ export default function ShoppingListApp() {
   const [activeTab, setActiveTab] = useState('search');
   const [cameraPressed, setCameraPressed] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [showTextAutocomplete, setShowTextAutocomplete] = useState(false);
+  const [textCursorPosition, setTextCursorPosition] = useState(0);
+  const [currentWord, setCurrentWord] = useState('');
+  const [wordStartPosition, setWordStartPosition] = useState(0);
+  const [highlightedProducts, setHighlightedProducts] = useState([]);
+  const [showAutoIdentifyButton, setShowAutoIdentifyButton] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -69,6 +75,14 @@ export default function ShoppingListApp() {
       ).slice(0, 6)
     : [];
 
+  // Filtrar produtos baseado na palavra atual no texto multiline
+  const filteredTextProducts = currentWord && currentWord.length > 2
+    ? availableProducts.filter(product => 
+        product.name.toLowerCase().includes(currentWord.toLowerCase()) ||
+        product.brand.toLowerCase().includes(currentWord.toLowerCase())
+      ).slice(0, 6)
+    : [];
+
   // Atualizar índice selecionado quando a lista muda
   useEffect(() => {
     if (filteredProducts.length > 0) {
@@ -94,6 +108,13 @@ export default function ShoppingListApp() {
       textareaRef.current.style.height = Math.max(40, textareaRef.current.scrollHeight) + 'px';
     }
   }, [textInput]);
+
+  // Verificar se deve mostrar o botão de auto-identificação
+  useEffect(() => {
+    const hasText = textInput.trim().length > 10;
+    const hasUnidentifiedProducts = textInput.trim().length > 0 && highlightedProducts.length === 0;
+    setShowAutoIdentifyButton(hasText && hasUnidentifiedProducts);
+  }, [textInput, highlightedProducts]);
 
   // Inicializar reconhecimento de voz
   useEffect(() => {
@@ -160,6 +181,196 @@ export default function ShoppingListApp() {
       console.warn('Reconhecimento de voz não suportado neste navegador');
     }
   }, [filteredProducts, selectedProductIndex]);
+
+  const handleTextInputChange = (e) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    
+    setTextInput(value);
+    setTextCursorPosition(cursorPos);
+    
+    // Encontrar a palavra atual no cursor
+    const words = value.split(/\s+/);
+    let currentPos = 0;
+    let foundWord = '';
+    let wordStart = 0;
+    
+    for (let i = 0; i < words.length; i++) {
+      const wordEnd = currentPos + words[i].length;
+      
+      if (cursorPos >= currentPos && cursorPos <= wordEnd) {
+        foundWord = words[i];
+        wordStart = currentPos;
+        break;
+      }
+      
+      currentPos = wordEnd + 1; // +1 for space
+    }
+    
+    setCurrentWord(foundWord);
+    setWordStartPosition(wordStart);
+    
+    // Mostrar autocomplete se a palavra tem mais de 2 caracteres
+    if (foundWord.length > 2) {
+      setShowTextAutocomplete(true);
+      setSelectedProductIndex(0);
+    } else {
+      setShowTextAutocomplete(false);
+    }
+  };
+
+  const handleTextKeyDown = (e) => {
+    if (showTextAutocomplete && filteredTextProducts.length > 0) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmTextProductSelection();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        rejectTextProductSelection();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedProductIndex(prev => 
+          prev > 0 ? prev - 1 : filteredTextProducts.length - 1
+        );
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedProductIndex(prev => 
+          prev < filteredTextProducts.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'Escape') {
+        setShowTextAutocomplete(false);
+      }
+    }
+  };
+
+  const confirmTextProductSelection = () => {
+    if (filteredTextProducts.length > 0 && selectedProductIndex >= 0) {
+      const selectedProduct = filteredTextProducts[selectedProductIndex];
+      addItem(selectedProduct);
+      
+      // Substituir a palavra atual pelo nome do produto e destacar
+      const newText = textInput.substring(0, wordStartPosition) + 
+                     selectedProduct.name + 
+                     textInput.substring(wordStartPosition + currentWord.length);
+      
+      // Adicionar destaque para o produto
+      const newHighlight = {
+        start: wordStartPosition,
+        end: wordStartPosition + selectedProduct.name.length,
+        product: selectedProduct
+      };
+      
+      setHighlightedProducts([...highlightedProducts, newHighlight]);
+      setTextInput(newText);
+      setShowTextAutocomplete(false);
+      
+      // Mover cursor para o final da palavra substituída
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = wordStartPosition + selectedProduct.name.length;
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    }
+  };
+
+  const rejectTextProductSelection = () => {
+    setShowTextAutocomplete(false);
+    // Continuar digitando normalmente
+    if (textareaRef.current) {
+      const newText = textInput + ' ';
+      setTextInput(newText);
+      setTimeout(() => {
+        textareaRef.current.setSelectionRange(newText.length, newText.length);
+      }, 0);
+    }
+  };
+
+  const autoIdentifyProducts = () => {
+    const words = textInput.toLowerCase().split(/\s+/);
+    const newHighlights = [];
+    const foundProducts = [];
+    let processedText = textInput;
+    let offset = 0;
+    
+    // Procurar por produtos no texto
+    availableProducts.forEach(product => {
+      const productNameLower = product.name.toLowerCase();
+      const productWords = productNameLower.split(/\s+/);
+      
+      // Procurar por correspondências parciais
+      for (let i = 0; i < words.length - productWords.length + 1; i++) {
+        const textSlice = words.slice(i, i + productWords.length).join(' ');
+        
+        if (productWords.some(word => textSlice.includes(word))) {
+          // Encontrar posição no texto original
+          const beforeText = words.slice(0, i).join(' ');
+          const start = beforeText.length + (beforeText.length > 0 ? 1 : 0);
+          const matchText = words.slice(i, i + productWords.length).join(' ');
+          const end = start + matchText.length;
+          
+          newHighlights.push({
+            start,
+            end,
+            product
+          });
+          
+          foundProducts.push(product);
+          break;
+        }
+      }
+    });
+    
+    // Adicionar produtos encontrados à lista
+    foundProducts.forEach(product => addItem(product));
+    setHighlightedProducts(newHighlights);
+  };
+
+  const renderHighlightedText = () => {
+    if (highlightedProducts.length === 0) {
+      return textInput;
+    }
+    
+    let result = [];
+    let lastIndex = 0;
+    
+    // Ordenar highlights por posição
+    const sortedHighlights = [...highlightedProducts].sort((a, b) => a.start - b.start);
+    
+    sortedHighlights.forEach((highlight, index) => {
+      // Texto antes do highlight
+      if (highlight.start > lastIndex) {
+        result.push(
+          <span key={`text-${index}`}>
+            {textInput.substring(lastIndex, highlight.start)}
+          </span>
+        );
+      }
+      
+      // Texto destacado
+      result.push(
+        <span 
+          key={`highlight-${index}`}
+          className="bg-blue-100 text-blue-800 px-1 rounded font-medium"
+        >
+          {textInput.substring(highlight.start, highlight.end)}
+        </span>
+      );
+      
+      lastIndex = highlight.end;
+    });
+    
+    // Texto restante
+    if (lastIndex < textInput.length) {
+      result.push(
+        <span key="text-end">
+          {textInput.substring(lastIndex)}
+        </span>
+      );
+    }
+    
+    return result;
+  };
 
   const startListening = () => {
     if (recognition && !isListening) {
@@ -502,7 +713,7 @@ export default function ShoppingListApp() {
 
       {/* Search Bar */}
       <div className="fixed bottom-16 left-0 right-0 bg-white px-4 py-4 rounded-t-3xl shadow-lg">
-        {/* Lista de resultados flutuante */}
+        {/* Lista de resultados flutuante para busca simples */}
         {showSearchResults && filteredProducts.length > 0 && activeTab !== 'text' && (
           <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
             {filteredProducts.map((product, index) => (
@@ -514,7 +725,42 @@ export default function ShoppingListApp() {
                   setShowSearchResults(false);
                   setSelectedProductIndex(-1);
                 }}
-                className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg last:border-b-0 ${
+                  index === selectedProductIndex ? 'bg-blue-50 border-blue-200' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={product.image} 
+                    alt={product.name}
+                    className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-800 text-sm">{product.name}</h4>
+                    <p className="text-xs text-gray-500">{product.brand}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-blue-600">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Lista de autocompletar para texto multiline */}
+        {showTextAutocomplete && filteredTextProducts.length > 0 && activeTab === 'text' && (
+          <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
+            <div className="p-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+              <p className="text-xs text-gray-600">
+                Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar ou <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Espaço</kbd> para rejeitar
+              </p>
+            </div>
+            {filteredTextProducts.map((product, index) => (
+              <div 
+                key={product.id}
+                onClick={confirmTextProductSelection}
+                className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 last:rounded-b-lg last:border-b-0 ${
                   index === selectedProductIndex ? 'bg-blue-50 border-blue-200' : ''
                 }`}
               >
@@ -554,15 +800,49 @@ export default function ShoppingListApp() {
         
         {/* Input Section */}
         {activeTab === 'text' ? (
-          <div className="bg-white rounded-lg p-3">
-            <textarea
-              ref={textareaRef}
-              placeholder="Digite sua lista de produtos ou texto aqui..."
-              className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 focus:ring-0 focus:border-0 min-h-[40px] max-h-[200px] p-0"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              style={{ height: 'auto', boxShadow: 'none' }}
-            />
+          <div className="bg-white rounded-lg p-3 relative">
+            <div className="relative">
+              {/* Overlay para mostrar texto destacado */}
+              {highlightedProducts.length > 0 && (
+                <div 
+                  className="absolute inset-0 p-0 pointer-events-none whitespace-pre-wrap break-words text-transparent leading-normal"
+                  style={{ 
+                    font: 'inherit',
+                    fontSize: 'inherit',
+                    lineHeight: 'inherit',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  {renderHighlightedText()}
+                </div>
+              )}
+              
+              <textarea
+                ref={textareaRef}
+                placeholder="Digite sua lista de produtos ou texto aqui..."
+                className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 focus:ring-0 focus:border-0 min-h-[40px] max-h-[200px] p-0 relative z-10"
+                value={textInput}
+                onChange={handleTextInputChange}
+                onKeyDown={handleTextKeyDown}
+                style={{ 
+                  height: 'auto', 
+                  boxShadow: 'none',
+                  backgroundColor: highlightedProducts.length > 0 ? 'transparent' : 'white'
+                }}
+              />
+            </div>
+            
+            {/* Botão de auto-identificação */}
+            {showAutoIdentifyButton && (
+              <button
+                onClick={autoIdentifyProducts}
+                className="absolute top-2 right-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+                title="Identificar produtos automaticamente"
+              >
+                <Wand2 size={16} />
+                <span className="text-xs hidden sm:inline">Auto</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-3 bg-white rounded-lg p-3">
@@ -613,6 +893,7 @@ export default function ShoppingListApp() {
             onClick={() => {
               if (isListening) stopListening();
               setActiveTab('search');
+              setShowTextAutocomplete(false);
             }}
             className={`p-2 rounded-full transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
           >
@@ -649,6 +930,7 @@ export default function ShoppingListApp() {
             onClick={() => {
               if (isListening) stopListening();
               setActiveTab('text');
+              setShowSearchResults(false);
             }}
             className={`p-2 rounded-full transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
           >
