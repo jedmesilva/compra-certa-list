@@ -1,6 +1,13 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+
+declare global {
+  interface Window {
+    SpeechRecognition?: any;
+    webkitSpeechRecognition?: any;
+  }
+}
 
 export default function ShoppingListApp() {
   const [items, setItems] = useState([]);
@@ -13,10 +20,11 @@ export default function ShoppingListApp() {
   const [selectedStoreIndex, setSelectedStoreIndex] = useState(-1);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
-  const [activeTab, setActiveTab] = useState('search'); // 'search', 'voice', 'camera', or 'text'
+  const [activeTab, setActiveTab] = useState('search');
   const [cameraPressed, setCameraPressed] = useState(false);
   const [textInput, setTextInput] = useState('');
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Lista de estabelecimentos de exemplo
   const availableStores = [
@@ -78,6 +86,14 @@ export default function ShoppingListApp() {
       setSelectedStoreIndex(-1);
     }
   }, [filteredStores.length]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.max(40, textareaRef.current.scrollHeight) + 'px';
+    }
+  }, [textInput]);
 
   // Inicializar reconhecimento de voz
   useEffect(() => {
@@ -264,22 +280,24 @@ export default function ShoppingListApp() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-32">
-      <style jsx>{`
-        .scrollbar-hide {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .pulse-red {
-          animation: pulse-red 1.5s infinite;
-        }
-        @keyframes pulse-red {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .scrollbar-hide {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+          .pulse-red {
+            animation: pulse-red 1.5s infinite;
+          }
+          @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `
+      }} />
       
       {/* Input invisível para captura de arquivo */}
       <input
@@ -537,11 +555,13 @@ export default function ShoppingListApp() {
         {/* Input Section */}
         {activeTab === 'text' ? (
           <div className="bg-white rounded-lg p-3">
-            <textarea
+            <Textarea
+              ref={textareaRef}
               placeholder="Digite sua lista de produtos ou texto aqui..."
-              className="w-full h-32 bg-transparent outline-none text-gray-700 resize-none"
+              className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 min-h-[40px] max-h-[200px] p-0"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
+              style={{ height: 'auto' }}
             />
           </div>
         ) : (
