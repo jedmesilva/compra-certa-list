@@ -327,7 +327,7 @@ export default function ShoppingListApp() {
         <div className="bg-white rounded-xl text-gray-700 relative">
           {!selectedStore ? (
             <div 
-              className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50"
+              className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 rounded-xl"
               onClick={() => setShowStoreSearchResults(!showStoreSearchResults)}
             >
               <Store className="text-gray-600" size={24} />
@@ -349,7 +349,7 @@ export default function ShoppingListApp() {
               />
             </div>
           ) : (
-            <div className="flex items-center gap-3 p-4">
+            <div className="flex items-center gap-3 p-4 rounded-xl">
               <img 
                 src={selectedStore.image} 
                 alt={selectedStore.name}
@@ -378,12 +378,12 @@ export default function ShoppingListApp() {
           
           {/* Lista flutuante de estabelecimentos */}
           {showStoreSearchResults && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto z-50">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg max-h-80 overflow-y-auto z-50">
               {filteredStores.map((store, index) => (
                 <div 
                   key={store.id}
                   onClick={() => selectStore(store)}
-                  className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                  className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl last:border-b-0 ${
                     index === selectedStoreIndex ? 'bg-blue-50 border-blue-200' : ''
                   }`}
                 >
@@ -555,13 +555,13 @@ export default function ShoppingListApp() {
         {/* Input Section */}
         {activeTab === 'text' ? (
           <div className="bg-white rounded-lg p-3">
-            <Textarea
+            <textarea
               ref={textareaRef}
               placeholder="Digite sua lista de produtos ou texto aqui..."
-              className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 min-h-[40px] max-h-[200px] p-0"
+              className="w-full bg-transparent outline-none text-gray-700 resize-none border-0 focus:ring-0 focus:border-0 min-h-[40px] max-h-[200px] p-0"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              style={{ height: 'auto' }}
+              style={{ height: 'auto', boxShadow: 'none' }}
             />
           </div>
         ) : (
