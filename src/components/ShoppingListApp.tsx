@@ -692,19 +692,6 @@ export default function ShoppingListApp() {
             </div>
             <span className="text-gray-600">Total estimado</span>
           </div>
-          
-          {/* Botão Solicitar Compra - aparece acima da navegação quando há itens */}
-          {items.length > 0 && (
-            <div className="px-4 pt-3 pb-2 border-b border-gray-100">
-              <button
-                onClick={handleRequestPurchase}
-                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white rounded-xl px-4 py-3 transition-colors font-medium shadow-sm"
-              >
-                <ShoppingCart size={20} />
-                <span>Solicitar compra</span>
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -780,207 +767,261 @@ export default function ShoppingListApp() {
         )}
       </div>
 
-      {/* Search Bar */}
-      <div className="fixed bottom-20 left-0 right-0 bg-white px-4 py-4 rounded-t-3xl shadow-lg">
-        {/* Lista de resultados flutuante para busca simples */}
-        {showSearchResults && filteredProducts.length > 0 && activeTab !== 'text' && (
-          <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
-            {filteredProducts.map((product, index) => (
-              <div 
-                key={product.id}
-                onClick={() => {
-                  addItem(product);
-                  setSearchText('');
-                  setShowSearchResults(false);
-                  setSelectedProductIndex(-1);
-                }}
-                className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg last:border-b-0 ${
-                  index === selectedProductIndex ? 'bg-blue-50 border-blue-200' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-800 text-sm">{product.name}</h4>
-                    <p className="text-xs text-gray-500">{product.brand}</p>
+      {/* Bottom Interface - Completely Restructured */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white">
+        
+        {/* 1. Search/Input Section - Top */}
+        <div className="px-4 py-4 rounded-t-3xl shadow-lg border-t border-gray-200">
+          {/* Lista de resultados flutuante para busca simples */}
+          {showSearchResults && filteredProducts.length > 0 && activeTab !== 'text' && (
+            <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
+              {filteredProducts.map((product, index) => (
+                <div 
+                  key={product.id}
+                  onClick={() => {
+                    addItem(product);
+                    setSearchText('');
+                    setShowSearchResults(false);
+                    setSelectedProductIndex(-1);
+                  }}
+                  className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg last:border-b-0 ${
+                    index === selectedProductIndex ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 text-sm">{product.name}</h4>
+                      <p className="text-xs text-gray-500">{product.brand}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-blue-600">
+                      R$ {product.price.toFixed(2).replace('.', ',')}
+                    </p>
                   </div>
-                  <p className="text-sm font-semibold text-blue-600">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
-                  </p>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {/* Sugestões flutuantes para contentEditable */}
-        {showSuggestions && suggestions.length > 0 && activeTab === 'text' && (
-          <div
-            className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-30 min-w-48 mb-4"
-            style={{
-              left: `${suggestionPosition.x + 16}px`,
-              bottom: `${120 - suggestionPosition.y}px`
-            }}
-          >
-            <div className="p-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-              <p className="text-xs text-gray-600">
-                Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar ou <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Espaço</kbd> para rejeitar
-              </p>
-            </div>
-            {suggestions.map((product, index) => (
-              <div
-                key={product.id}
-                className={`px-4 py-2 cursor-pointer flex items-center gap-2 last:rounded-b-lg ${
-                  index === selectedSuggestion 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'hover:bg-gray-50'
-                }`}
-                onClick={() => addProductFromEditor(product)}
-              >
-                <Plus size={14} className="text-gray-400" />
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{product.name}</div>
-                  <div className="text-xs text-gray-500">{product.brand}</div>
-                </div>
-                <div className="text-sm font-semibold text-blue-600">
-                  R$ {product.price.toFixed(2).replace('.', ',')}
-                </div>
-                {index === selectedSuggestion && (
-                  <span className="ml-auto text-xs text-gray-500">Enter</span>
-                )}
+          {/* Sugestões flutuantes para contentEditable */}
+          {showSuggestions && suggestions.length > 0 && activeTab === 'text' && (
+            <div
+              className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-30 min-w-48 mb-4"
+              style={{
+                left: `${suggestionPosition.x + 16}px`,
+                bottom: `${120 - suggestionPosition.y}px`
+              }}
+            >
+              <div className="p-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
+                <p className="text-xs text-gray-600">
+                  Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar ou <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Espaço</kbd> para rejeitar
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Indicador de status de voz */}
-        {isListening && (
-          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full pulse-red"></div>
-              <span className="text-sm text-red-600 font-medium">
-                🎤 Escutando... Diga o nome do produto
-              </span>
-            </div>
-            <p className="text-xs text-red-500 text-center mt-1">
-              Diga "confirmar" ou "ok" para adicionar o produto selecionado
-            </p>
-          </div>
-        )}
-        
-        {/* Input Section */}
-        {activeTab === 'text' ? (
-          <div className="relative">
-            {/* Editor contentEditable */}
-            <div className="bg-white rounded-lg p-3 border border-gray-200 relative">
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleEditorInput}
-                onKeyDown={handleEditorKeyDown}
-                className="w-full min-h-[40px] max-h-[200px] overflow-y-auto outline-none text-gray-700 leading-relaxed"
-                style={{ whiteSpace: 'pre-wrap' }}
-                data-placeholder="Digite sua lista de produtos ou receita aqui... Ex: 2 xícaras de arroz, 1kg de feijão preto..."
-              />
-              
-              {/* Botões de ação */}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  {selectedProducts.length > 0 && (
-                    <button
-                      onClick={clearAllProducts}
-                      className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
-                    >
-                      <X size={12} />
-                      Limpar produtos
-                    </button>
+              {suggestions.map((product, index) => (
+                <div
+                  key={product.id}
+                  className={`px-4 py-2 cursor-pointer flex items-center gap-2 last:rounded-b-lg ${
+                    index === selectedSuggestion 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => addProductFromEditor(product)}
+                >
+                  <Plus size={14} className="text-gray-400" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{product.name}</div>
+                    <div className="text-xs text-gray-500">{product.brand}</div>
+                  </div>
+                  <div className="text-sm font-semibold text-blue-600">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </div>
+                  {index === selectedSuggestion && (
+                    <span className="ml-auto text-xs text-gray-500">Enter</span>
                   )}
                 </div>
-                
-                <button
-                  onClick={autoIdentifyProducts}
-                  className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1 text-sm"
-                  title="Identificar produtos automaticamente"
-                >
-                  <Wand2 size={14} />
-                  Auto-identificar
-                </button>
-              </div>
+              ))}
             </div>
-
-            {/* Lista de produtos identificados */}
-            {selectedProducts.length > 0 && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-blue-800 text-sm">
-                    Produtos identificados ({selectedProducts.length})
-                  </h3>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {selectedProducts.map((product, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                    >
-                      {product.name}
-                    </span>
-                  ))}
+          )}
+          
+          {/* Indicador de status de voz */}
+          {isListening && (
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full pulse-red"></div>
+                <span className="text-sm text-red-600 font-medium">
+                  🎤 Escutando... Diga o nome do produto
+                </span>
+              </div>
+              <p className="text-xs text-red-500 text-center mt-1">
+                Diga "confirmar" ou "ok" para adicionar o produto selecionado
+              </p>
+            </div>
+          )}
+          
+          {/* Input Section */}
+          {activeTab === 'text' ? (
+            <div className="relative">
+              {/* Editor contentEditable */}
+              <div className="bg-white rounded-lg p-3 border border-gray-200 relative">
+                <div
+                  ref={editorRef}
+                  contentEditable="true"
+                  suppressContentEditableWarning
+                  onInput={handleEditorInput}
+                  onKeyDown={handleEditorKeyDown}
+                  className="w-full min-h-[40px] max-h-[200px] overflow-y-auto outline-none text-gray-700 leading-relaxed"
+                  style={{ whiteSpace: 'pre-wrap' }}
+                  data-placeholder="Digite sua lista de produtos ou receita aqui... Ex: 2 xícaras de arroz, 1kg de feijão preto..."
+                />
+                
+                {/* Botões de ação */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    {selectedProducts.length > 0 && (
+                      <button
+                        onClick={clearAllProducts}
+                        className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                      >
+                        <X size={12} />
+                        Limpar produtos
+                      </button>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={autoIdentifyProducts}
+                    className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1 text-sm"
+                    title="Identificar produtos automaticamente"
+                  >
+                    <Wand2 size={14} />
+                    Auto-identificar
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 bg-white rounded-lg p-3">
-            {activeTab === 'search' && <Search size={20} className="text-blue-500" />}
-            {activeTab === 'voice' && <Mic size={20} className={isListening ? "text-red-500" : "text-blue-500"} />}
-            {activeTab === 'camera' && <Camera size={20} className="text-blue-500" />}
-            <input 
-              type="text"
-              placeholder={isListening ? "Escutando... diga o nome do produto" : "Busque por um produto ou características..."}
-              className={`flex-1 bg-transparent outline-none ${isListening ? 'text-red-600' : 'text-gray-700'}`}
-              value={searchText}
-              onFocus={() => {
-                if (!isListening) {
-                  setActiveTab('search');
-                  setShowSearchResults(!!searchText);
-                }
-              }}
-              onBlur={() => setTimeout(() => {
-                if (!isListening) {
-                  setShowSearchResults(false);
-                  setShowStoreSearchResults(false);
-                }
-              }, 200)}
-              onChange={(e) => {
-                if (!isListening) {
-                  setSearchText(e.target.value);
-                  if (e.target.value) {
-                    setShowSearchResults(true);
-                    setActiveTab('search');
-                  }
-                }
-              }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !isListening) {
-                  addItemFromSearch();
-                }
-              }}
-              readOnly={isListening}
-            />
-          </div>
-        )}
-      </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white">
-        {/* Botão Solicitar Compra - aparece quando há itens */}
+              {/* Lista de produtos identificados */}
+              {selectedProducts.length > 0 && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-blue-800 text-sm">
+                      Produtos identificados ({selectedProducts.length})
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedProducts.map((product, index) => (
+                      <span
+                        key={index}
+                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
+                      >
+                        {product.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-200">
+              {activeTab === 'search' && <Search size={20} className="text-blue-500" />}
+              {activeTab === 'voice' && <Mic size={20} className={isListening ? "text-red-500" : "text-blue-500"} />}
+              {activeTab === 'camera' && <Camera size={20} className="text-blue-500" />}
+              <input 
+                type="text"
+                placeholder={isListening ? "Escutando... diga o nome do produto" : "Busque por um produto ou características..."}
+                className={`flex-1 bg-transparent outline-none ${isListening ? 'text-red-600' : 'text-gray-700'}`}
+                value={searchText}
+                onFocus={() => {
+                  if (!isListening) {
+                    setActiveTab('search');
+                    setShowSearchResults(!!searchText);
+                  }
+                }}
+                onBlur={() => setTimeout(() => {
+                  if (!isListening) {
+                    setShowSearchResults(false);
+                    setShowStoreSearchResults(false);
+                  }
+                }, 200)}
+                onChange={(e) => {
+                  if (!isListening) {
+                    setSearchText(e.target.value);
+                    if (e.target.value) {
+                      setShowSearchResults(true);
+                      setActiveTab('search');
+                    }
+                  }
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !isListening) {
+                    addItemFromSearch();
+                  }
+                }}
+                readOnly={isListening}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 2. Navigation Buttons - Middle (smaller) */}
+        <div className="px-4 py-2 border-t border-gray-100">
+          <div className="flex justify-around items-center">
+            <button 
+              onClick={() => {
+                if (isListening) stopListening();
+                setActiveTab('search');
+                setShowSuggestions(false);
+              }}
+              className={`p-2 rounded-lg transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+            >
+              <Search size={20} className={activeTab === 'search' && !isListening ? "text-blue-500" : "text-gray-400"} />
+            </button>
+            
+            <button 
+              onClick={toggleVoiceSearch}
+              className={`p-2 rounded-lg transition-colors ${
+                isListening 
+                  ? 'bg-red-100 text-red-600' 
+                  : activeTab === 'voice' 
+                    ? 'bg-blue-100 text-blue-500' 
+                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+              }`}
+            >
+              <Mic size={20} />
+            </button>
+            
+            <button 
+              onClick={handleCameraClick}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                cameraPressed
+                  ? 'bg-blue-500 text-white scale-95'
+                  : activeTab === 'camera'
+                    ? 'bg-blue-100 text-blue-500'
+                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+              }`}
+            >
+              <Camera size={20} />
+            </button>
+            
+            <button 
+              onClick={() => {
+                if (isListening) stopListening();
+                setActiveTab('text');
+                setShowSearchResults(false);
+              }}
+              className={`p-2 rounded-lg transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+            >
+              <FileText size={20} className={activeTab === 'text' ? "text-blue-500" : "text-gray-400"} />
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Purchase Button - Bottom (when items exist) */}
         {items.length > 0 && (
-          <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+          <div className="px-4 py-3 border-t border-gray-100">
             <button
               onClick={handleRequestPurchase}
               className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-4 py-3 transition-colors font-medium shadow-sm"
@@ -990,59 +1031,6 @@ export default function ShoppingListApp() {
             </button>
           </div>
         )}
-
-        {/* Navegação principal */}
-        <div className="px-4 py-3">
-          <div className="flex justify-around items-center">
-            <button 
-              onClick={() => {
-                if (isListening) stopListening();
-                setActiveTab('search');
-                setShowSuggestions(false);
-              }}
-              className={`p-2 rounded-full transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-            >
-              <Search size={24} className={activeTab === 'search' && !isListening ? "text-blue-500" : "text-gray-400"} />
-            </button>
-            
-            <button 
-              onClick={toggleVoiceSearch}
-              className={`p-3 rounded-full transition-colors ${
-                isListening 
-                  ? 'bg-red-100 text-red-600' 
-                  : activeTab === 'voice' 
-                    ? 'bg-blue-100 text-blue-500' 
-                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-              }`}
-            >
-              <Mic size={24} />
-            </button>
-            
-            <button 
-              onClick={handleCameraClick}
-              className={`p-2 rounded-full transition-all duration-200 ${
-                cameraPressed
-                  ? 'bg-blue-500 text-white scale-95'
-                  : activeTab === 'camera'
-                    ? 'bg-blue-100 text-blue-500'
-                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-              }`}
-            >
-              <Camera size={24} />
-            </button>
-            
-            <button 
-              onClick={() => {
-                if (isListening) stopListening();
-                setActiveTab('text');
-                setShowSearchResults(false);
-              }}
-              className={`p-2 rounded-full transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-            >
-              <FileText size={24} className={activeTab === 'text' ? "text-blue-500" : "text-gray-400"} />
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
