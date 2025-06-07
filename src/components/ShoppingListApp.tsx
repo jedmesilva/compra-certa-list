@@ -693,15 +693,17 @@ export default function ShoppingListApp() {
             <span className="text-gray-600">Total estimado</span>
           </div>
           
-          {/* Botão Solicitar Compra - só aparece quando há itens */}
+          {/* Botão Solicitar Compra - aparece acima da navegação quando há itens */}
           {items.length > 0 && (
-            <button
-              onClick={handleRequestPurchase}
-              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white rounded-2xl px-4 py-3 whitespace-nowrap transition-colors font-medium"
-            >
-              <ShoppingCart size={18} />
-              <span>Solicitar compra</span>
-            </button>
+            <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+              <button
+                onClick={handleRequestPurchase}
+                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white rounded-xl px-4 py-3 transition-colors font-medium shadow-sm"
+              >
+                <ShoppingCart size={20} />
+                <span>Solicitar compra</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -975,55 +977,58 @@ export default function ShoppingListApp() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3">
-        <div className="flex justify-around items-center">
-          <button 
-            onClick={() => {
-              if (isListening) stopListening();
-              setActiveTab('search');
-              setShowSuggestions(false);
-            }}
-            className={`p-2 rounded-full transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-          >
-            <Search size={24} className={activeTab === 'search' && !isListening ? "text-blue-500" : "text-gray-400"} />
-          </button>
-          
-          <button 
-            onClick={toggleVoiceSearch}
-            className={`p-3 rounded-full transition-colors ${
-              isListening 
-                ? 'bg-red-100 text-red-600' 
-                : activeTab === 'voice' 
-                  ? 'bg-blue-100 text-blue-500' 
-                  : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-            }`}
-          >
-            <Mic size={24} />
-          </button>
-          
-          <button 
-            onClick={handleCameraClick}
-            className={`p-2 rounded-full transition-all duration-200 ${
-              cameraPressed
-                ? 'bg-blue-500 text-white scale-95'
-                : activeTab === 'camera'
-                  ? 'bg-blue-100 text-blue-500'
-                  : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
-            }`}
-          >
-            <Camera size={24} />
-          </button>
-          
-          <button 
-            onClick={() => {
-              if (isListening) stopListening();
-              setActiveTab('text');
-              setShowSearchResults(false);
-            }}
-            className={`p-2 rounded-full transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-          >
-            <FileText size={24} className={activeTab === 'text' ? "text-blue-500" : "text-gray-400"} />
-          </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+        {/* Navegação principal */}
+        <div className="px-4 py-3">
+          <div className="flex justify-around items-center">
+            <button 
+              onClick={() => {
+                if (isListening) stopListening();
+                setActiveTab('search');
+                setShowSuggestions(false);
+              }}
+              className={`p-2 rounded-full transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+            >
+              <Search size={24} className={activeTab === 'search' && !isListening ? "text-blue-500" : "text-gray-400"} />
+            </button>
+            
+            <button 
+              onClick={toggleVoiceSearch}
+              className={`p-3 rounded-full transition-colors ${
+                isListening 
+                  ? 'bg-red-100 text-red-600' 
+                  : activeTab === 'voice' 
+                    ? 'bg-blue-100 text-blue-500' 
+                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+              }`}
+            >
+              <Mic size={24} />
+            </button>
+            
+            <button 
+              onClick={handleCameraClick}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                cameraPressed
+                  ? 'bg-blue-500 text-white scale-95'
+                  : activeTab === 'camera'
+                    ? 'bg-blue-100 text-blue-500'
+                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+              }`}
+            >
+              <Camera size={24} />
+            </button>
+            
+            <button 
+              onClick={() => {
+                if (isListening) stopListening();
+                setActiveTab('text');
+                setShowSearchResults(false);
+              }}
+              className={`p-2 rounded-full transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+            >
+              <FileText size={24} className={activeTab === 'text' ? "text-blue-500" : "text-gray-400"} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
