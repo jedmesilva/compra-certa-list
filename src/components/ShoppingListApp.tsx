@@ -781,7 +781,7 @@ export default function ShoppingListApp() {
       </div>
 
       {/* Search Bar */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white px-4 py-4 rounded-t-3xl shadow-lg">
+      <div className="fixed bottom-20 left-0 right-0 bg-white px-4 py-4 rounded-t-3xl shadow-lg">
         {/* Lista de resultados flutuante para busca simples */}
         {showSearchResults && filteredProducts.length > 0 && activeTab !== 'text' && (
           <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
@@ -977,7 +977,20 @@ export default function ShoppingListApp() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+      <div className="fixed bottom-0 left-0 right-0 bg-white">
+        {/* Botão Solicitar Compra - aparece quando há itens */}
+        {items.length > 0 && (
+          <div className="px-4 pt-3 pb-2 border-b border-gray-100">
+            <button
+              onClick={handleRequestPurchase}
+              className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-4 py-3 transition-colors font-medium shadow-sm"
+            >
+              <ShoppingCart size={20} />
+              <span>Solicitar compra</span>
+            </button>
+          </div>
+        )}
+
         {/* Navegação principal */}
         <div className="px-4 py-3">
           <div className="flex justify-around items-center">
