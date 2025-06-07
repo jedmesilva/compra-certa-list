@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X, Wand2, Plus } from 'lucide-react';
+import { ArrowLeft, Bookmark, Store, ShoppingBasket, Search, Mic, Camera, FileText, Trash, X, Wand2, Plus, ShoppingCart } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -522,6 +522,20 @@ export default function ShoppingListApp() {
 
   const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  const handleRequestPurchase = () => {
+    if (items.length === 0) return;
+    
+    // Aqui você pode implementar a lógica de solicitar compra
+    console.log('Solicitando compra:', {
+      store: selectedStore,
+      items: items,
+      total: totalPrice
+    });
+    
+    // Por enquanto, apenas um alert para demonstrar
+    alert(`Compra solicitada!\nEstabelecimento: ${selectedStore?.name || 'Não selecionado'}\nItens: ${items.length}\nTotal: R$ ${totalPrice.toFixed(2).replace('.', ',')}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 pb-32">
       <style dangerouslySetInnerHTML={{
@@ -678,6 +692,17 @@ export default function ShoppingListApp() {
             </div>
             <span className="text-gray-600">Total estimado</span>
           </div>
+          
+          {/* Botão Solicitar Compra - só aparece quando há itens */}
+          {items.length > 0 && (
+            <button
+              onClick={handleRequestPurchase}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white rounded-2xl px-4 py-3 whitespace-nowrap transition-colors font-medium"
+            >
+              <ShoppingCart size={18} />
+              <span>Solicitar compra</span>
+            </button>
+          )}
         </div>
       </div>
 
