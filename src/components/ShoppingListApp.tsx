@@ -188,11 +188,10 @@ export default function ShoppingListApp() {
   const createProductSpan = (product) => {
     const span = document.createElement('span');
     span.className = 'product-highlight bg-blue-100 text-blue-800 px-1 rounded font-medium mx-0.5';
-    span.setAttribute('data-product-id', product.id);
+    span.setAttribute('data-product-id', product.id.toString());
     span.textContent = product.name;
     span.contentEditable = false;
     
-    // Adicionar botão de remoção
     const removeBtn = document.createElement('button');
     removeBtn.innerHTML = '×';
     removeBtn.className = 'ml-1 text-blue-600 hover:text-red-600 text-xs';
@@ -209,26 +208,21 @@ export default function ShoppingListApp() {
     const { range } = currentWordRef.current;
     if (!range) return;
     
-    // Remover conteúdo da palavra atual
     range.deleteContents();
     
-    // Inserir span do produto
     const productSpan = createProductSpan(product);
     range.insertNode(productSpan);
     
-    // Adicionar espaço após o produto
     const space = document.createTextNode(' ');
     range.setStartAfter(productSpan);
     range.insertNode(space);
     
-    // Posicionar cursor após o espaço
     const selection = window.getSelection();
     selection.removeAllRanges();
     range.setStartAfter(space);
     range.collapse(true);
     selection.addRange(range);
     
-    // Adicionar produto às listas
     addItem(product);
     setSelectedProducts(prev => [...prev, product]);
     setShowSuggestions(false);
@@ -248,12 +242,10 @@ export default function ShoppingListApp() {
     const words = text.split(/\s+/);
     const foundProducts = [];
     
-    // Procurar por produtos no texto
     availableProducts.forEach(product => {
       const productName = product.name.toLowerCase();
       const productWords = productName.split(/\s+/);
       
-      // Verificar se todas as palavras do produto estão no texto
       const hasAllWords = productWords.every(word => 
         words.some(textWord => textWord.includes(word.slice(0, 3)))
       );
@@ -263,7 +255,6 @@ export default function ShoppingListApp() {
       }
     });
     
-    // Limpar editor e recriar com produtos destacados
     const originalText = editorRef.current.textContent;
     let processedText = originalText;
     
@@ -273,7 +264,6 @@ export default function ShoppingListApp() {
       processedText = processedText.replace(regex, `<PRODUCT:${product.id}>`);
     });
     
-    // Reconstruir o editor com produtos destacados
     editorRef.current.innerHTML = '';
     const parts = processedText.split(/(<PRODUCT:\d+>)/);
     
@@ -361,7 +351,6 @@ export default function ShoppingListApp() {
           setShowSearchResults(true);
         }
         
-        // Se o usuário disse "confirmar", "ok", "sim", "esse mesmo" ou "adicionar", adiciona o produto selecionado
         const confirmWords = ['confirmar', 'ok', 'sim', 'esse mesmo', 'adicionar', 'esse', 'confirma'];
         const spokenText = finalTranscript.toLowerCase();
         
@@ -525,19 +514,17 @@ export default function ShoppingListApp() {
   const handleRequestPurchase = () => {
     if (items.length === 0) return;
     
-    // Aqui você pode implementar a lógica de solicitar compra
     console.log('Solicitando compra:', {
       store: selectedStore,
       items: items,
       total: totalPrice
     });
     
-    // Por enquanto, apenas um alert para demonstrar
     alert(`Compra solicitada!\nEstabelecimento: ${selectedStore?.name || 'Não selecionado'}\nItens: ${items.length}\nTotal: R$ ${totalPrice.toFixed(2).replace('.', ',')}`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-32">
+    <div className="min-h-screen bg-gray-100 pb-64">
       <style dangerouslySetInnerHTML={{
         __html: `
           .scrollbar-hide {
@@ -767,14 +754,13 @@ export default function ShoppingListApp() {
         )}
       </div>
 
-      {/* Bottom Interface - Completely Restructured */}
+      {/* NEW BOTTOM INTERFACE - Following the provided layout */}
       <div className="fixed bottom-0 left-0 right-0 bg-white">
-        
-        {/* 1. Search/Input Section - Top */}
-        <div className="px-4 py-4 rounded-t-3xl shadow-lg border-t border-gray-200">
-          {/* Lista de resultados flutuante para busca simples */}
+        <div className="w-full max-w-2xl mx-auto p-6 bg-white rounded-t-3xl shadow-lg border-t border-gray-200">
+          
+          {/* Search Results - Floating above when visible */}
           {showSearchResults && filteredProducts.length > 0 && activeTab !== 'text' && (
-            <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto">
+            <div className="absolute bottom-full left-4 right-4 mb-4 bg-white rounded-lg border border-gray-200 shadow-lg max-h-80 overflow-y-auto z-50">
               {filteredProducts.map((product, index) => (
                 <div 
                   key={product.id}
@@ -807,18 +793,18 @@ export default function ShoppingListApp() {
             </div>
           )}
 
-          {/* Sugestões flutuantes para contentEditable */}
+          {/* Floating Suggestions for text editor */}
           {showSuggestions && suggestions.length > 0 && activeTab === 'text' && (
             <div
-              className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-30 min-w-48 mb-4"
+              className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-30 min-w-48"
               style={{
-                left: `${suggestionPosition.x + 16}px`,
-                bottom: `${120 - suggestionPosition.y}px`
+                left: `${suggestionPosition.x + 24}px`,
+                bottom: `${200 - suggestionPosition.y}px`
               }}
             >
               <div className="p-2 bg-gray-50 border-b border-gray-200 rounded-t-lg">
                 <p className="text-xs text-gray-600">
-                  Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar ou <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Espaço</kbd> para rejeitar
+                  Pressione <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> para confirmar
                 </p>
               </div>
               {suggestions.map((product, index) => (
@@ -839,100 +825,63 @@ export default function ShoppingListApp() {
                   <div className="text-sm font-semibold text-blue-600">
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </div>
-                  {index === selectedSuggestion && (
-                    <span className="ml-auto text-xs text-gray-500">Enter</span>
-                  )}
                 </div>
               ))}
             </div>
           )}
-          
-          {/* Indicador de status de voz */}
+
+          {/* Voice status indicator */}
           {isListening && (
-            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full pulse-red"></div>
                 <span className="text-sm text-red-600 font-medium">
                   🎤 Escutando... Diga o nome do produto
                 </span>
               </div>
-              <p className="text-xs text-red-500 text-center mt-1">
-                Diga "confirmar" ou "ok" para adicionar o produto selecionado
-              </p>
             </div>
           )}
-          
-          {/* Input Section */}
-          {activeTab === 'text' ? (
-            <div className="relative">
-              {/* Editor contentEditable */}
-              <div className="bg-white rounded-lg p-3 border border-gray-200 relative">
+
+          {/* 1. Campo de busca - Top section */}
+          <div className="rounded-2xl p-4 mb-4 bg-gray-50 border border-gray-200">
+            {activeTab === 'text' ? (
+              <div className="relative">
                 <div
                   ref={editorRef}
                   contentEditable="true"
                   suppressContentEditableWarning
                   onInput={handleEditorInput}
                   onKeyDown={handleEditorKeyDown}
-                  className="w-full min-h-[40px] max-h-[200px] overflow-y-auto outline-none text-gray-700 leading-relaxed"
+                  className="w-full min-h-[40px] max-h-[120px] overflow-y-auto outline-none text-gray-700 leading-relaxed"
                   style={{ whiteSpace: 'pre-wrap' }}
-                  data-placeholder="Digite sua lista de produtos ou receita aqui... Ex: 2 xícaras de arroz, 1kg de feijão preto..."
+                  data-placeholder="Digite sua lista de produtos ou receita aqui..."
                 />
                 
-                {/* Botões de ação */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    {selectedProducts.length > 0 && (
-                      <button
-                        onClick={clearAllProducts}
-                        className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
-                      >
-                        <X size={12} />
-                        Limpar produtos
-                      </button>
-                    )}
+                {selectedProducts.length > 0 && (
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={clearAllProducts}
+                      className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+                    >
+                      <X size={12} />
+                      Limpar produtos
+                    </button>
+                    
+                    <button
+                      onClick={autoIdentifyProducts}
+                      className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1 text-sm"
+                    >
+                      <Wand2 size={14} />
+                      Auto-identificar
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={autoIdentifyProducts}
-                    className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1 text-sm"
-                    title="Identificar produtos automaticamente"
-                  >
-                    <Wand2 size={14} />
-                    Auto-identificar
-                  </button>
-                </div>
+                )}
               </div>
-
-              {/* Lista de produtos identificados */}
-              {selectedProducts.length > 0 && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-blue-800 text-sm">
-                      Produtos identificados ({selectedProducts.length})
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedProducts.map((product, index) => (
-                      <span
-                        key={index}
-                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs"
-                      >
-                        {product.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-200">
-              {activeTab === 'search' && <Search size={20} className="text-blue-500" />}
-              {activeTab === 'voice' && <Mic size={20} className={isListening ? "text-red-500" : "text-blue-500"} />}
-              {activeTab === 'camera' && <Camera size={20} className="text-blue-500" />}
-              <input 
+            ) : (
+              <input
                 type="text"
                 placeholder={isListening ? "Escutando... diga o nome do produto" : "Busque por um produto ou características..."}
-                className={`flex-1 bg-transparent outline-none ${isListening ? 'text-red-600' : 'text-gray-700'}`}
+                className="w-full text-gray-600 text-lg outline-none bg-transparent"
                 value={searchText}
                 onFocus={() => {
                   if (!isListening) {
@@ -943,7 +892,6 @@ export default function ShoppingListApp() {
                 onBlur={() => setTimeout(() => {
                   if (!isListening) {
                     setShowSearchResults(false);
-                    setShowStoreSearchResults(false);
                   }
                 }, 200)}
                 onChange={(e) => {
@@ -962,48 +910,64 @@ export default function ShoppingListApp() {
                 }}
                 readOnly={isListening}
               />
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* 2. Navigation Buttons - Middle (smaller) */}
-        <div className="px-4 py-2 border-t border-gray-100">
-          <div className="flex justify-around items-center">
+          {/* 2. Ícones de ação - Middle section */}
+          <div className="flex justify-start gap-4 mb-6 ml-4">
             <button 
               onClick={() => {
                 if (isListening) stopListening();
                 setActiveTab('search');
                 setShowSuggestions(false);
               }}
-              className={`p-2 rounded-lg transition-colors ${activeTab === 'search' && !isListening ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'search' && !isListening 
+                  ? 'bg-blue-100' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
             >
-              <Search size={20} className={activeTab === 'search' && !isListening ? "text-blue-500" : "text-gray-400"} />
+              <Search className={`w-4 h-4 ${
+                activeTab === 'search' && !isListening ? 'text-blue-600' : 'text-gray-600'
+              }`} />
             </button>
             
             <button 
               onClick={toggleVoiceSearch}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-full transition-colors ${
                 isListening 
-                  ? 'bg-red-100 text-red-600' 
+                  ? 'bg-red-100' 
                   : activeTab === 'voice' 
-                    ? 'bg-blue-100 text-blue-500' 
-                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+                    ? 'bg-blue-100' 
+                    : 'bg-gray-200 hover:bg-gray-300'
               }`}
             >
-              <Mic size={20} />
+              <Mic className={`w-4 h-4 ${
+                isListening 
+                  ? 'text-red-600' 
+                  : activeTab === 'voice' 
+                    ? 'text-blue-600' 
+                    : 'text-gray-600'
+              }`} />
             </button>
             
             <button 
               onClick={handleCameraClick}
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-2 rounded-full transition-all duration-200 ${
                 cameraPressed
-                  ? 'bg-blue-500 text-white scale-95'
+                  ? 'bg-blue-500 scale-95'
                   : activeTab === 'camera'
-                    ? 'bg-blue-100 text-blue-500'
-                    : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+                    ? 'bg-blue-100'
+                    : 'bg-gray-200 hover:bg-gray-300'
               }`}
             >
-              <Camera size={20} />
+              <Camera className={`w-4 h-4 ${
+                cameraPressed
+                  ? 'text-white'
+                  : activeTab === 'camera'
+                    ? 'text-blue-600'
+                    : 'text-gray-600'
+              }`} />
             </button>
             
             <button 
@@ -1012,25 +976,27 @@ export default function ShoppingListApp() {
                 setActiveTab('text');
                 setShowSearchResults(false);
               }}
-              className={`p-2 rounded-lg transition-colors ${activeTab === 'text' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+              className={`p-2 rounded-full transition-colors ${
+                activeTab === 'text' 
+                  ? 'bg-blue-100' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
             >
-              <FileText size={20} className={activeTab === 'text' ? "text-blue-500" : "text-gray-400"} />
+              <FileText className={`w-4 h-4 ${
+                activeTab === 'text' ? 'text-blue-600' : 'text-gray-600'
+              }`} />
             </button>
           </div>
-        </div>
 
-        {/* 3. Purchase Button - Bottom (when items exist) */}
-        {items.length > 0 && (
-          <div className="px-4 py-3 border-t border-gray-100">
-            <button
-              onClick={handleRequestPurchase}
-              className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-4 py-3 transition-colors font-medium shadow-sm"
-            >
-              <ShoppingCart size={20} />
-              <span>Solicitar compra</span>
-            </button>
-          </div>
-        )}
+          {/* 3. Botão Solicitar compra - Bottom section (always visible) */}
+          <button 
+            onClick={handleRequestPurchase}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xl font-medium py-4 px-6 rounded-2xl transition-colors shadow-sm flex items-center justify-center gap-2"
+          >
+            <ShoppingCart size={24} />
+            Solicitar compra
+          </button>
+        </div>
       </div>
     </div>
   );
